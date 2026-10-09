@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistem e-Rapor & Jurnal Guru</title>
+  
+  <!-- Wajib untuk Aplikasi yang bisa di-install (PWA) -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#3b82f6">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3135/3135810.png">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: { colors: { brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' } } } }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased h-screen overflow-hidden">
+
+  <!-- Custom Toast Notification -->
+  <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-6 py-3 rounded-xl shadow-lg transform translate-y-[150%] opacity-0 transition-all duration-300 z-[100] flex items-center">
+    <svg class="w-5 h-5 mr-3 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+    <span id="toastMsg" class="font-medium">Tindakan berhasil!</span>
+  </div>
+
+  <!-- Login Screen -->
+  <div id="loginScreen" class="flex items-center justify-center h-screen bg-gradient-to-br from-brand-50 to-slate-100 absolute inset-0 z-50">
+    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-100">
+      <div class="text-center mb-8">
+        <div class="bg-brand-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477-4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+        </div>
+        <h1 class="text-2xl font-bold text-slate-800">Sistem e-Rapor</h1>
+        <p class="text-slate-500 mt-1">Masuk ke portal guru</p>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Nama Guru</label>
+          <input type="text" id="username" class="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all" placeholder="Masukkan nama Anda">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Kata Sandi</label>
+          <input type="password" id="password" class="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all" placeholder="Masukkan kata sandi (12345)">
+        </div>
+        <div id="loginError" class="hidden bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-100 flex items-center">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          Kata sandi salah. Gunakan '12345'.
+        </div>
+        <button onclick="login()" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 rounded-xl transition-colors mt-2 shadow-sm shadow-brand-500/30">
+          Masuk
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- App Content -->
+  <div id="appContent" class="hidden flex h-screen w-full">
+    <!-- Sidebar Navigation -->
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col flex-shrink-0 z-10 shadow-sm">
+      <div class="p-6 flex items-center border-b border-slate-100">
+        <div class="bg-brand-100 p-2 rounded-lg mr-3 text-brand-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477-4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+        </div>
+        <div>
+          <h2 class="font-bold text-slate-800 leading-tight">e-Rapor</h2>
+          <p class="text-xs text-slate-500">Portal Guru</p>
+        </div>
+      </div>
+      <div class="p-4 border-b border-slate-100 flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold overflow-hidden">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+        </div>
+        <div class="overflow-hidden">
+          <p id="profileName" class="text-sm font-semibold text-slate-800 truncate">Guru Pengampu</p>
+          <p class="text-xs text-slate-500">NIP. 1980xxxxxx</p>
+        </div>
+      </div>
+      <div class="flex-1 overflow-y-auto py-4 px-3 flex flex-col">
+        <nav class="space-y-1">
+          <a href="#" onclick="switchTab('dashboard')" id="nav-dashboard" class="flex items-center px-4 py-3 text-brand-600 bg-brand-50 font-medium rounded-xl transition-colors">
+            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg> Dashboard
+          </a>
+          <a href="#" onclick="switchTab('grades')" id="nav-grades" class="flex items-center px-4 py-3 text-slate-600 rounded-xl hover:bg-slate-100 transition-colors">
+            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg> Nilai Akademik
+          </a>
+          <a href="#" onclick="switchTab('journal')" id="nav-journal" class="flex items-center px-4 py-3 text-slate-600 rounded-xl hover:bg-slate-100 transition-colors">
+            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg> Jurnal Mengajar
+          </a>
+          <a href="#" onclick="switchTab('attendance')" id="nav-attendance" class="flex items-center px-4 py-3 text-slate-600 rounded-xl hover:bg-slate-100 transition-colors">
+            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg> Presensi
+          </a>
+          <a href="#" onclick="switchTab('manage')" id="nav-manage" class="flex items-center px-4 py-3 text-slate-600 rounded-xl hover:bg-slate-100 transition-colors">
+            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg> Data Siswa & Kelas
+          </a>
+        </nav>
+        <div class="p-4 mt-auto border-t border-slate-200">
+          <a href="#" onclick="logout()" class="flex items-center px-4 py-3 text-red-500 rounded-xl hover:bg-red-50 transition-colors">
+            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg> Keluar (Logout)
+          </a>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-50/50">
+      <header class="bg-white px-8 py-5 border-b border-slate-200 flex items-center justify-between shadow-sm">
+        <h1 id="pageTitle" class="text-2xl font-bold text-slate-800">Dashboard Utama</h1>
+        <div class="flex items-center space-x-3">
+          <span class="text-sm font-medium bg-brand-100 text-brand-700 px-3 py-1.5 rounded-full">TA 2026/2027</span>
+        </div>
+      </header>
+
+      <div class="flex-1 overflow-y-auto p-8">
+        
+        <!-- DASHBOARD TAB -->
+        <div id="tab-dashboard" class="tab-content block space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center">
+              <div class="p-4 rounded-xl bg-blue-100 text-blue-600 mr-4">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+              </div>
+              <div>
+                <p class="text-sm text-slate-500 font-medium">Total Siswa (<span id="dashClassName">Kelas 7A</span>)</p>
+                <h3 id="dashTotalStudents" class="text-2xl font-bold text-slate-800">0 Siswa</h3>
+              </div>
+            </div>
+            <!-- Modul info lainnya disembunyikan untuk penyederhanaan -->
+          </div>
+          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">Statistik Nilai Rata-rata per Mata Pelajaran</h3>
+            <div class="w-full h-80 relative">
+              <canvas id="gradeChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- GRADES TAB -->
+        <div id="tab-grades" class="tab-content hidden space-y-6">
+          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-6">
+              <div class="w-full md:w-1/3">
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Pilih Mata Pelajaran</label>
+                <select id="filterSubject" onchange="renderGradesTable()" class="w-full text-sm font-medium border border-slate-200 rounded-xl px-4 py-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-shadow">
+                  <option value="Pendidikan Agama Islam">Pendidikan Agama Islam</option>
+                  <option value="Pendidikan Pancasila">Pendidikan Pancasila</option>
+                  <option value="Bahasa Indonesia">Bahasa Indonesia</option>
+                  <option value="Matematika">Matematika</option>
+                </select>
+              </div>
+              <div class="flex space-x-2 self-end">
+                <button onclick="exportGradesCSV()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-medium transition-colors shadow-sm text-sm flex items-center">
+                  CSV
+                </button>
+                <button onclick="exportGradesPDF()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-medium transition-colors shadow-sm text-sm flex items-center">
+                  PDF
+                </button>
+                <button onclick="saveGrades()" class="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors shadow-sm">
+                  Simpan Perubahan
+                </button>
+              </div>
+            </div>
+            <div class="overflow-x-auto border border-slate-200 rounded-xl">
+              <table class="w-full text-left text-sm whitespace-nowrap">
+                <thead class="bg-slate-50 border-b border-slate-200 text-slate-700">
+                  <tr>
+                    <th class="px-3 py-3 font-semibold w-10 text-center">No</th>
+                    <th class="px-3 py-3 font-semibold">Nama Siswa</th>
+                    <th class="px-2 py-3 font-semibold text-center">S1</th>
+                    <th class="px-2 py-3 font-semibold text-center">S2</th>
+                    <th class="px-2 py-3 font-semibold text-center">S3</th>
+                    <th class="px-2 py-3 font-semibold text-center">STS</th>
+                    <th class="px-2 py-3 font-semibold text-center">SAS</th>
+                    <th class="px-3 py-3 font-semibold text-center">NA</th>
+                  </tr>
+                </thead>
+                <tbody id="gradesTableBody" class="divide-y divide-slate-100 bg-white">
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- JOURNAL TAB -->
+        <div id="tab-journal" class="tab-content hidden space-y-6">
+          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">Input Jurnal Mengajar</h3>
+            <form id="journalForm" class="space-y-4 max-w-2xl" onsubmit="event.preventDefault(); saveJournal();">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700 mb-2">Tanggal</label>
+                  <input type="date" id="journalDate" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700 mb-2">Mata Pelajaran</label>
+                  <select id="journalSubject" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    <option value="Matematika">Matematika</option>
+                    <option value="Bahasa Indonesia">Bahasa Indonesia</option>
+                  </select>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Hadir</label>
+                    <input type="number" id="journalHadir" min="0" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                  </div>
+                  <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Absen</label>
+                    <input type="number" id="journalAbsen" min="0" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                  </div>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Materi Pokok</label>
+                <textarea id="journalMaterial" rows="3" required class="w-full border border-slate-200 rounded-xl px-4 py-3 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500"></textarea>
+              </div>
+              <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-medium transition-colors shadow-sm">
+                Simpan Jurnal
+              </button>
+            </form>
+          </div>
+          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">Riwayat Jurnal Mengajar</h3>
+            <div class="overflow-x-auto border border-slate-200 rounded-xl">
+              <table class="w-full text-left text-sm whitespace-nowrap">
+                <thead class="bg-slate-50 border-b border-slate-200 text-slate-700">
+                  <tr>
+                    <th class="px-4 py-3 font-semibold w-24">Tanggal</th>
+                    <th class="px-4 py-3 font-semibold">Mapel</th>
+                    <th class="px-4 py-3 font-semibold">Materi Pokok</th>
+                    <th class="px-4 py-3 font-semibold text-center w-16">Hadir</th>
+                    <th class="px-4 py-3 font-semibold text-center w-16">Absen</th>
+                  </tr>
+                </thead>
+                <tbody id="journalTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ATTENDANCE TAB -->
+        <div id="tab-attendance" class="tab-content hidden space-y-6">
+          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+             <h3 class="text-lg font-bold text-slate-800 mb-6">Rekap Presensi Siswa</h3>
+            <div class="overflow-x-auto border border-slate-200 rounded-xl">
+              <table class="w-full text-left text-sm whitespace-nowrap">
+                <thead class="bg-slate-50 border-b border-slate-200 text-slate-700">
+                  <tr>
+                    <th class="px-4 py-3 font-semibold w-12 text-center">No</th>
+                    <th class="px-4 py-3 font-semibold">Nama Siswa</th>
+                    <th class="px-4 py-3 font-semibold text-center text-emerald-600">Hadir</th>
+                    <th class="px-4 py-3 font-semibold text-center text-blue-600">Sakit</th>
+                    <th class="px-4 py-3 font-semibold text-center text-amber-600">Izin</th>
+                    <th class="px-4 py-3 font-semibold text-center text-red-600">Alpa</th>
+                  </tr>
+                </thead>
+                <tbody id="attendanceTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- MANAGE STUDENTS & CLASS TAB -->
+        <div id="tab-manage" class="tab-content hidden space-y-6">
+          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">Kelola Data Kelas</h3>
+            <div class="flex flex-col md:flex-row items-end gap-4 max-w-3xl mb-8">
+              <div class="flex-1 w-full">
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Pilih Kelas</label>
+                <select id="classSelector" onchange="changeClass(this.value)" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 bg-slate-50 font-medium"></select>
+              </div>
+              <div class="flex-1 w-full">
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Tambah Kelas Baru</label>
+                <div class="flex gap-2">
+                  <input type="text" id="newClassName" placeholder="Contoh: Kelas 8A" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 bg-slate-50">
+                  <button onclick="addNewClass()" class="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors shadow-sm">Tambah</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex justify-between items-center mb-4 pt-6 border-t border-slate-100">
+              <h3 class="text-lg font-bold text-slate-800">Daftar Siswa - <span id="manageStudentClassLabel" class="text-brand-600"></span></h3>
+              <button onclick="addStudentRow()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center">
+                + Tambah Siswa
+              </button>
+            </div>
+            
+            <div class="overflow-x-auto border border-slate-200 rounded-xl">
+              <table class="w-full text-left text-sm whitespace-nowrap">
+                <thead class="bg-slate-50 border-b border-slate-200 text-slate-700">
+                  <tr>
+                    <th class="px-4 py-3 font-semibold w-12 text-center">No</th>
+                    <th class="px-4 py-3 font-semibold">Nama Lengkap Siswa</th>
+                    <th class="px-4 py-3 font-semibold">Nomor Induk (NIS)</th>
+                    <th class="px-4 py-3 font-semibold text-center w-24">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="manageStudentsTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Inisialisasi Data Bawaan
+    let currentClassName = "Kelas 7A";
+    let classesList = ["Kelas 7A", "Kelas 7B"];
+    let studentsByClass = {
+      "Kelas 7A": [{ id: 1, name: "Ahmad Budi Santoso", nis: "24501" }],
+      "Kelas 7B": [{ id: 2, name: "Gita Savitri", nis: "24507" }]
+    };
+    let gradesData = {};
+    let attendanceData = [];
+    let journalsData = [];
+
+    const subjects = ["Pendidikan Agama Islam", "Pendidikan Pancasila", "Bahasa Indonesia", "Matematika"];
+
+    // FUNGSI LOCAL STORAGE (Menyimpan & Memuat Data)
+    function loadDataFromStorage() {
+        const savedData = localStorage.getItem('eRaporData_v1');
+        if (savedData) {
+            const data = JSON.parse(savedData);
+            currentClassName = data.currentClassName || currentClassName;
+            classesList = data.classesList || classesList;
+            studentsByClass = data.studentsByClass || studentsByClass;
+            gradesData = data.gradesData || gradesData;
+            attendanceData = data.attendanceData || attendanceData;
+            journalsData = data.journalsData || journalsData;
+        } else {
+            // Jika belum ada data sama sekali, set data kosong untuk mencegah error
+            subjects.forEach(sub => gradesData[sub] = []);
+        }
+    }
+
+    function saveDataToStorage() {
+        const data = {
+            currentClassName,
+            classesList,
+            studentsByClass,
+            gradesData,
+            attendanceData,
+            journalsData
+        };
+        localStorage.setItem('eRaporData_v1', JSON.stringify(data));
+    }
+
+    // Load data sebelum aplikasi benar-benar jalan
+    loadDataFromStorage();
+
+    function getStudents() {
+      if (!studentsByClass[currentClassName]) studentsByClass[currentClassName] = [];
+      return studentsByClass[currentClassName];
+    }
+
+    let chartInstance = null;
+
+    function showMessage(msg) {
+      const t = document.getElementById('toastMsg');
+      t.textContent = msg;
+      const toast = document.getElementById('toast');
+      toast.classList.remove('translate-y-[150%]', 'opacity-0');
+      setTimeout(() => toast.classList.add('translate-y-[150%]', 'opacity-0'), 3000);
+    }
+
+    function login() {
+      const passwordInput = document.getElementById('password').value;
+      if (passwordInput === '12345') {
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('loginScreen').classList.remove('flex');
+        document.getElementById('appContent').classList.remove('hidden');
+        document.getElementById('loginError').classList.add('hidden');
+        
+        updateClassDropdowns();
+        changeClass(currentClassName);
+        initChart();
+      } else {
+        document.getElementById('loginError').classList.remove('hidden');
+      }
+    }
+
+    function logout() {
+      document.getElementById('appContent').classList.add('hidden');
+      document.getElementById('loginScreen').classList.remove('hidden', 'flex');
+      document.getElementById('loginScreen').classList.add('flex');
+      document.getElementById('password').value = '';
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('block'));
+      
+      const navLinks = ['dashboard', 'grades', 'journal', 'attendance', 'manage'];
+      navLinks.forEach(id => {
+        const link = document.getElementById(`nav-${id}`);
+        if (link) {
+          link.classList.remove('text-brand-600', 'bg-brand-50', 'font-medium');
+          link.classList.add('text-slate-600', 'hover:bg-slate-100');
+        }
+      });
+
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      document.getElementById(`tab-${tabId}`).classList.add('block');
+      
+      const activeLink = document.getElementById(`nav-${tabId}`);
+      if (activeLink) {
+        activeLink.classList.add('text-brand-600', 'bg-brand-50', 'font-medium');
+      }
+
+      if(tabId === 'dashboard') initChart();
+    }
+
+    function renderManageStudents() {
+      const students = getStudents();
+      if(document.getElementById('manageStudentClassLabel')) document.getElementById('manageStudentClassLabel').textContent = currentClassName;
+      const tbody = document.getElementById('manageStudentsTableBody');
+      tbody.innerHTML = '';
+      
+      students.forEach((student, index) => {
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50 transition-colors">
+            <td class="px-4 py-3 text-center text-slate-500">${index + 1}</td>
+            <td class="px-4 py-3">
+              <input type="text" onchange="updateStudent(${student.id}, 'name', this.value)" class="w-full border border-slate-200 rounded-md px-3 py-1.5" value="${student.name}">
+            </td>
+            <td class="px-4 py-3">
+              <input type="text" onchange="updateStudent(${student.id}, 'nis', this.value)" class="w-full border border-slate-200 rounded-md px-3 py-1.5" value="${student.nis}">
+            </td>
+            <td class="px-4 py-3 text-center">
+              <button onclick="deleteStudent(${student.id})" class="text-red-500 hover:text-red-700 p-1.5 bg-red-50 rounded-lg">Hapus</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    function updateStudent(id, field, value) {
+      const student = getStudents().find(s => s.id === id);
+      if (student) student[field] = value;
+      saveDataToStorage(); // Simpan perubahan
+      refreshDataViews();
+      showMessage("Data siswa diperbarui.");
+    }
+
+    function addStudentRow() {
+      const students = getStudents();
+      let maxId = 0;
+      Object.values(studentsByClass).forEach(classArr => classArr.forEach(s => { if(s.id > maxId) maxId = s.id; }));
+      
+      students.push({ id: maxId + 1, name: "Siswa Baru", nis: "00000" });
+      saveDataToStorage(); // Simpan
+      refreshDataViews();
+      showMessage("Siswa ditambahkan.");
+    }
+
+    function deleteStudent(id) {
+      studentsByClass[currentClassName] = getStudents().filter(s => s.id !== id);
+      saveDataToStorage(); // Simpan
+      refreshDataViews();
+      showMessage("Siswa dihapus.");
+    }
+
+    function addNewClass() {
+      const newClassName = document.getElementById('newClassName').value.trim();
+      if (newClassName && !classesList.includes(newClassName)) {
+        classesList.push(newClassName);
+        studentsByClass[newClassName] = [];
+        document.getElementById('newClassName').value = '';
+        saveDataToStorage(); // Simpan
+        updateClassDropdowns();
+        changeClass(newClassName);
+        showMessage("Kelas baru ditambahkan!");
+      }
+    }
+
+    function changeClass(className) {
+      currentClassName = className;
+      saveDataToStorage();
+      if(document.getElementById('classSelector')) document.getElementById('classSelector').value = className;
+      document.getElementById('dashClassName').textContent = currentClassName;
+      refreshDataViews();
+    }
+
+    function updateClassDropdowns() {
+      const selector = document.getElementById('classSelector');
+      if(selector) {
+        selector.innerHTML = classesList.map(c => `<option value="${c}">${c}</option>`).join('');
+        selector.value = currentClassName;
+      }
+    }
+
+    function refreshDataViews() {
+      renderManageStudents();
+      renderGradesTable();
+      renderAttendanceTable();
+      document.getElementById('dashTotalStudents').textContent = `${getStudents().length} Siswa`;
+    }
+
+    function saveJournal() {
+      const date = document.getElementById('journalDate').value;
+      const subject = document.getElementById('journalSubject').value;
+      const hadir = document.getElementById('journalHadir').value;
+      const absen = document.getElementById('journalAbsen').value;
+      const material = document.getElementById('journalMaterial').value;
+      
+      journalsData.unshift({ date, subject, material, hadir, absen });
+      saveDataToStorage(); // Simpan
+      renderJournalTable();
+      document.getElementById('journalForm').reset();
+      showMessage("Jurnal disimpan!");
+    }
+
+    function renderJournalTable() {
+      const tbody = document.getElementById('journalTableBody');
+      tbody.innerHTML = journalsData.map(j => `
+          <tr class="hover:bg-slate-50">
+            <td class="px-4 py-3">${j.date}</td>
+            <td class="px-4 py-3 font-medium text-brand-600">${j.subject}</td>
+            <td class="px-4 py-3">${j.material}</td>
+            <td class="px-4 py-3 text-center text-emerald-600">${j.hadir}</td>
+            <td class="px-4 py-3 text-center text-red-500">${j.absen}</td>
+          </tr>
+      `).join('');
+    }
+
+    // FUNGSI SIMPAN NILAI DARI TABEL
+    function saveGrades() {
+      const subject = document.getElementById('filterSubject').value;
+      const students = getStudents();
+      
+      if (!gradesData[subject]) gradesData[subject] = [];
+
+      students.forEach(student => {
+        const row = document.getElementById(`grade-row-${student.id}`);
+        if (row) {
+          const inputs = row.querySelectorAll('input');
+          const vals = Array.from(inputs).map(inp => parseInt(inp.value) || 0);
+
+          let record = gradesData[subject].find(g => g.studentId === student.id);
+          if (!record) {
+             record = { studentId: student.id };
+             gradesData[subject].push(record);
+          }
+          
+          record.s1 = vals[0]; record.s2 = vals[1]; record.s3 = vals[2];
+          record.sts = vals[3]; record.sas = vals[4];
+        }
+      });
+
+      saveDataToStorage();
+      renderGradesTable(); // Update Nilai Akhir
+      initChart();
+      showMessage('Perubahan Nilai Berhasil Disimpan!');
+    }
+
+    function renderGradesTable() {
+      const students = getStudents();
+      const subject = document.getElementById('filterSubject').value;
+      const tbody = document.getElementById('gradesTableBody');
+      const subjectData = gradesData[subject] || [];
+      
+      tbody.innerHTML = students.map((student, index) => {
+        const g = subjectData.find(x => x.studentId === student.id) || { s1:0, s2:0, s3:0, sts:0, sas:0 };
+        const finalGrade = Math.round((g.s1 + g.s2 + g.s3 + g.sts + g.sas) / 5);
+        
+        return `
+          <tr id="grade-row-${student.id}" class="hover:bg-slate-50 transition-colors">
+            <td class="px-3 py-3 text-center">${index + 1}</td>
+            <td class="px-3 py-3"><p class="font-medium">${student.name}</p><p class="text-xs">NIS: ${student.nis}</p></td>
+            <td class="px-2 py-3"><input type="number" class="w-12 text-center border rounded" value="${g.s1}"></td>
+            <td class="px-2 py-3"><input type="number" class="w-12 text-center border rounded" value="${g.s2}"></td>
+            <td class="px-2 py-3"><input type="number" class="w-12 text-center border rounded" value="${g.s3}"></td>
+            <td class="px-2 py-3"><input type="number" class="w-12 text-center border bg-amber-50 rounded" value="${g.sts}"></td>
+            <td class="px-2 py-3"><input type="number" class="w-12 text-center border bg-brand-50 rounded" value="${g.sas}"></td>
+            <td class="px-3 py-3 text-center font-bold text-lg">${finalGrade}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderAttendanceTable() {
+      const students = getStudents();
+      document.getElementById('attendanceTableBody').innerHTML = students.map((student, index) => {
+        const att = attendanceData.find(a => a.studentId === student.id) || { hadir:0, sakit:0, izin:0, alpa:0 };
+        return `
+          <tr>
+            <td class="px-4 py-3 text-center">${index + 1}</td>
+            <td class="px-4 py-3 font-medium">${student.name}</td>
+            <td class="px-4 py-3 text-center text-emerald-600">${att.hadir}</td>
+            <td class="px-4 py-3 text-center text-blue-600">${att.sakit}</td>
+            <td class="px-4 py-3 text-center text-amber-600">${att.izin}</td>
+            <td class="px-4 py-3 text-center text-red-600">${att.alpa}</td>
+          </tr>`;
+      }).join('');
+    }
+
+    function initChart() {
+      if (chartInstance) chartInstance.destroy();
+      const ctx = document.getElementById('gradeChart').getContext('2d');
+      const students = getStudents().map(s => s.id);
+      
+      const chartData = subjects.map(sub => {
+        const relevantGrades = (gradesData[sub] || []).filter(g => students.includes(g.studentId));
+        if(relevantGrades.length === 0) return 0;
+        const sum = relevantGrades.reduce((acc, curr) => acc + ((curr.s1 + curr.s2 + curr.s3 + curr.sts + curr.sas)/5), 0);
+        return Math.round(sum / relevantGrades.length);
+      });
+
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: subjects.map(l => l.length > 10 ? l.substring(0, 10)+'...' : l),
+          datasets: [{ data: chartData, backgroundColor: '#3b82f6', borderRadius: 6 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { max: 100 } } }
+      });
+    }
+
+  </script>
+
+  <!-- SCRIPT UNTUK MENDAFTARKAN SERVICE WORKER (PWA) -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('Service Worker terdaftar!', reg))
+          .catch(err => console.log('Service Worker gagal terdaftar', err));
+      });
+    }
+  </script>
+</body>
+</html>
